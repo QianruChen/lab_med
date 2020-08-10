@@ -33,16 +33,39 @@ public class DiDataElement {
 	 */
 	public void readNext(DiFileInputStream is) throws Exception {
     	// exercise 1
-		setGroupID(is.getByte());
-		setElementID(is.getByte());
-		int vr = is.getByte();
-		if (vr==DiDi.AE || vr==DiDi.AS || vr==DiDi.CS || vr==DiDi.DA || vr==DiDi.DS ||
-				vr==DiDi.DT || vr==DiDi.IS || vr==DiDi.LO || vr==DiDi.LT || vr==DiDi.OF ||
-				vr==DiDi.PN || vr==DiDi.SH || vr==DiDi.ST || vr==DiDi.TM || vr==DiDi.UI ||
-				vr==DiDi.UN || vr==DiDi.UT) {
-			
+		int groupid = is.getShort();
+		if (groupid == -1) {
+			return;
 		}
-		
+		setGroupID(groupid);
+		setElementID(is.getShort());
+		int b0 = is.getByte();
+		int b1 = is.getByte();
+		int vr = (b0 << 8) + b1;
+		if (vr==DiDi.AE || vr==DiDi.AS || vr==DiDi.AT || vr==DiDi.CS || vr==DiDi.DA || vr==DiDi.DS ||
+				vr==DiDi.DT || vr==DiDi.FD || vr==DiDi.FL || vr==DiDi.IS || vr==DiDi.LO || vr==DiDi.LT ||
+				vr==DiDi.OF || vr==DiDi.PN || vr==DiDi.SH || vr==DiDi.SL || vr==DiDi.SS || vr==DiDi.ST || 
+				vr==DiDi.TM || vr==DiDi.UI || vr==DiDi.UL || vr==DiDi.US || vr==DiDi.OF || vr==DiDi.QQ || 
+				vr==DiDi.OX || vr==DiDi.DL || vr==DiDi.XX) {
+			setVR(vr);
+			int vl = is.getShort();
+			setVL(vl);
+		}else if (vr==DiDi.OB || vr==DiDi.OW || vr==DiDi.SQ || vr==DiDi.UT || vr==DiDi.UN) {
+			setVR(vr);
+			is.getShort();
+			int vl = is.getInt();
+			setVL(vl);
+		}else {
+			boolean little_endian = is.get_little_endian();
+			int b2 = is.getByte();
+			int b3 = is.getByte();
+			int vl = little_endian ? ((b3<<24) + (b2<<16) + (b1<<8) + b0) : ((b0<<24) + (b1<<16) + (b2<<8) + b3);;
+			setVL(vl);
+			setVR(DiDi.getVR(getTag()));
+		}
+		byte[] values = new byte[getVL()];
+		is.read(values);
+		setValues(values);
 	}
 
 	/**

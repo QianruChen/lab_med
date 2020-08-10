@@ -169,4 +169,12 @@ public class DiFileInputStream extends FileInputStream {
     public void set_little_endian(boolean little_endian) {
     	_little_endian = little_endian;
     }
+    
+    /**
+     * Returns little endian true or false.
+     * @return
+     */
+    public boolean get_little_endian() {
+    	return _little_endian;
+	}
 }

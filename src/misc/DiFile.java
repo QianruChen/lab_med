@@ -2,6 +2,10 @@ package misc;
 
 import java.util.*;
 
+import com.jogamp.opengl.math.geom.Frustum.Location;
+
+import sun.java2d.SunGraphics2D;
+
 /**
  * Implements the internal representation of a DICOM file.
  * Stores all DataElements and makes them accessable via getDataElement(TagName).
@@ -38,6 +42,34 @@ public class DiFile {
 	 */
 	public void initFromFile(String file_name) throws Exception {
 		// exercise 1
+		DiFileInputStream is = new DiFileInputStream(file_name);
+		if (!is.skipHeader()) {
+			return;
+		}
+		do {
+			DiDataElement dataElement= new DiDataElement();
+			dataElement.readNext(is);
+			_data_elements.put(dataElement.getTag(), dataElement);
+			if (dataElement.getTag()==0x7fe00010) {
+				break;
+			}
+		} while (true);
+		is.close();
+		DiDataElement dataElement = getElement(0x00280100);
+		_bits_allocated = getElement(0x00280100).getValueAsInt();
+		_bits_stored = getElement(0x00280101).getValueAsInt();
+		_w = getElement(0x00280011).getValueAsInt();
+		_h = getElement(0x00280010).getValueAsInt();
+		
+		if (_data_elements.containsKey(0x00200013)) {
+			_image_number = getElement(0x00200013).getValueAsInt();
+		}else {
+			DiFileInputStream is2 = new DiFileInputStream(file_name);
+			is2.skipHeader();
+			_image_number = is2.quickscan_for_image_number();
+			is2.close();
+		}
+		_file_name = file_name;
 	}
 
 	/**
