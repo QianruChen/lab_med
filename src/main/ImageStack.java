@@ -27,6 +27,7 @@ public class ImageStack extends MyObservable {
 	
 	// voxel with original gray value (unskaliert)
 	private int[][][] _voxel;
+	private int[][][] _skaliert_voxel;
 	/**
 	 * Default Constructor.
 	 */
@@ -39,36 +40,72 @@ public class ImageStack extends MyObservable {
     	}
     	return _instance;
 	}
+	
 	public int getGrayValue(int i, int j,int k) {
 		return _voxel[i][j][k];
 	}
+	
 	public void createVoxel() {
 		_voxel = new int[_w][_h][getNumberOfImages()];
+		_skaliert_voxel = new int[_w][_h][getNumberOfImages()];
 		DiFile diFile = getDiFile(0);
 		int bits_allocated = diFile.getBitsAllocated();
+		int bits_stored = getDiFile(0).getBitsStored();
+		int window_center = 1<<(bits_stored-1);
+		int window_width = 1<<(bits_stored);
+		try {
+			window_center = getDiFile(0).getElement(0x00281050).getValueAsInt();
+			window_width = getDiFile(0).getElement(0x00281051).getValueAsInt();
+		} catch (Exception e) {
+//			System.out.println("There are no value of window center and window width");
+		}
 		int slope = diFile.getElement(0x00281053).getValueAsInt();
 		int intercept = diFile.getElement(0x00281052).getValueAsInt();
 		for (int k = 0; k < getNumberOfImages(); k++) {
 			diFile = getDiFile(k);
 			byte[] pixel_data_byte = diFile.getElement(0x7fe00010).getValues();
 			int[] gray_value_unskaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
+			int[] gray_value_skaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
 			for (int i = 0; i < pixel_data_byte.length-bits_allocated/8+1; i = i+bits_allocated/8) {
 				int gray_value = 0;
 				for (int j = 0; j < bits_allocated/8; j++) {
 					int tmp = ((int)(pixel_data_byte[i+j] & 0xff))<<(8*j);
 					gray_value = gray_value + tmp;
 				}
-				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value*slope+intercept;
+				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value;
+				int skaliert = gray_value*slope+intercept;
+				if (gray_value <= (window_center-0.5-(window_width-1)/2)) {
+					skaliert = 0;
+				}else if (gray_value > (window_center-0.5+(window_width)/2)) {
+					skaliert = 255;
+				}else {
+					skaliert =(int)(((gray_value-(window_center-0.5))/(window_width-1)+0.5)*255);
+				}
+				gray_value_skaliert[i/(bits_allocated/8)] = skaliert;
+//				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value*slope+intercept;
 			}
 			for (int i = 0; i < _w; i++) {
 				for (int j = 0; j < _h; j++) {
 					_voxel[i][j][k] = gray_value_unskaliert[j*_w+i];
+					_skaliert_voxel[i][j][k] = gray_value_skaliert[j*_w+i];
 				}
 			}
 		}
 		System.out.println("created volume "+_w+" "+_h+" "+ getNumberOfImages());
 	}
 	
+	public int getSkaliertGrayValue(int i,int j,int k) {
+		return _skaliert_voxel[i][j][k];
+	}
+	
+	public void setSegment(String seg_name,Segment seg) {
+		if (!_segment_map.containsKey(seg_name)) {
+			System.out.println("no such segment in imagestack"+seg_name);
+			return;
+		}
+		_segment_map.replace(seg_name, seg);
+		notifyObservers(new Message(Message.M_SEG_CHANGED,seg));
+	}
 	/**
 	 * Reads all DICOM files from the given directory. All files are checked
 	 * for correctness before loading. The load process is implemented as a thread.

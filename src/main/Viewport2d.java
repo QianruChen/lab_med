@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Iterator;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
@@ -19,6 +20,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import misc.BitMask;
 import misc.DiFile;
 import misc.MyObservable;
 import misc.MyObserver;
@@ -208,27 +210,54 @@ public class Viewport2d extends Viewport implements MyObserver {
 		default:
 			break;
 		}
+		
 		// create background image
 		_bg_img = new BufferedImage(_w, _h, BufferedImage.TYPE_INT_ARGB);
 
 		// create image for segment layers
 		for (String seg_name : _map_name_to_seg.keySet()) {
 			BufferedImage seg_img = new BufferedImage(_w, _h, BufferedImage.TYPE_INT_ARGB);
-			
 			_map_seg_name_to_img.put(seg_name, seg_img);
 		}
 	}
 	
-	public int skalieren(int window_center,int window_width,int unskaliert) {
-		int skaliert = unskaliert;
-		if (unskaliert <= (window_center-0.5-(window_width-1)/2)) {
-			skaliert = 0;
-		}else if (unskaliert > (window_center-0.5+(window_width)/2)) {
-			skaliert = 255;
-		}else {
-			skaliert =(int)(((unskaliert-(window_center-0.5))/(window_width-1)+0.5)*255);
+//	public int skalieren(int window_center,int window_width,int slope, int intercept, int unskaliert) {
+//		int skaliert = unskaliert*slope+intercept;
+//		if (unskaliert <= (window_center-0.5-(window_width-1)/2)) {
+//			skaliert = 0;
+//		}else if (unskaliert > (window_center-0.5+(window_width)/2)) {
+//			skaliert = 255;
+//		}else {
+//			skaliert =(int)(((unskaliert-(window_center-0.5))/(window_width-1)+0.5)*255);
+//		}
+//		return skaliert;
+//	}
+	
+	public BitMask calculate_bitMask(Segment seg) {
+		BitMask seg_image = new BitMask(_w, _h);
+		int active_img_id = _slices.getActiveImageID();
+		switch (_view_mode) {
+		case 0:
+			seg_image = seg.getMask(active_img_id);
+			break;
+		case 1:
+			for (int i = 0; i < _w; i++) {
+				for (int j = 0; j < _h; j++) {
+					seg_image.set(i, j, seg.getMask(j).get(active_img_id, i));
+				}
+			}
+			break;
+		case 2:
+			for (int i = 0; i < _w; i++) {
+				for (int j = 0; j < _h; j++) {
+					seg_image.set(i, j, seg.getMask(j).get(i, active_img_id));
+				}
+			}
+			break;
+		default:
+			break;
 		}
-		return skaliert;
+		return seg_image;
 	}
 	/*
 	 * Calculates the background image and segmentation layer images and forces a repaint.
@@ -247,24 +276,13 @@ public class Viewport2d extends Viewport implements MyObserver {
 			System.out.println("not fit");
 		}
 		int active_img_id = _slices.getActiveImageID();
-		int bits_stored = _slices.getDiFile(0).getBitsStored();
-		int window_center = 1<<(bits_stored-1);
-		int window_width = 1<<(bits_stored);
-		try {
-			window_center = _slices.getDiFile(0).getElement(0x00281050).getValueAsInt();
-			window_width = _slices.getDiFile(0).getElement(0x00281051).getValueAsInt();
-		} catch (Exception e) {
-//			System.out.println("There are no value of window center and window width");
-		}
 		// rendering the background picture
 		if (_show_bg) {
 			switch (_view_mode) {
 			case 0:
-//				gray_value_unskaliert = get_transversal();
 				for (int i = 0; i < _w; i++) {
 					for (int j = 0; j < _h; j++) {
-						int value_unskaliert = _slices.getGrayValue(i, j, active_img_id);
-						int value_skaliert = skalieren(window_center, window_width, value_unskaliert);
+						int value_skaliert = _slices.getSkaliertGrayValue(i, j, active_img_id);
 						_bg_img.setRGB(i, j, 0xff000000+(value_skaliert<<16)+(value_skaliert<<8)+value_skaliert );
 					}
 				}
@@ -272,8 +290,7 @@ public class Viewport2d extends Viewport implements MyObserver {
 			case 1:
 				for (int i = 0; i < _w; i++) {
 					for (int j = 0; j < _h; j++) {
-						int value_unskaliert = _slices.getGrayValue(active_img_id, i, j);
-						int value_skaliert = skalieren(window_center, window_width, value_unskaliert);
+						int value_skaliert = _slices.getSkaliertGrayValue(active_img_id, i, j);
 						_bg_img.setRGB(i, j, 0xff000000+(value_skaliert<<16)+(value_skaliert<<8)+value_skaliert );
 					}
 				}
@@ -281,8 +298,7 @@ public class Viewport2d extends Viewport implements MyObserver {
 			case 2:
 				for (int i = 0; i < _w; i++) {
 					for (int j = 0; j < _h; j++) {
-						int value_unskaliert = _slices.getGrayValue(i, active_img_id, j);
-						int value_skaliert = skalieren(window_center, window_width, value_unskaliert);
+						int value_skaliert = _slices.getSkaliertGrayValue(i, active_img_id, j);
 						_bg_img.setRGB(i, j, 0xff000000+(value_skaliert<<16)+(value_skaliert<<8)+value_skaliert );
 					}
 				}
@@ -299,77 +315,22 @@ public class Viewport2d extends Viewport implements MyObserver {
 			}
 		}
 		
-/*
-		// variables needed
-		int active_img_id = _slices.getActiveImageID();
-		DiFile active_file = _slices.getDiFile(active_img_id);
-		int[] gray_value_unskaliert = null;
 
-
-		int bits_stored = active_file.getBitsStored();
-		int slope = active_file.getElement(0x00281053).getValueAsInt();
-		int intercept = active_file.getElement(0x00281052).getValueAsInt();
-		int window_center = 1<<(bits_stored-1);
-		int window_width = 1<<(bits_stored);
-//		window_center = window_center*slope+intercept;
-//		window_width = window_width*slope+intercept;
-		try {
-			window_center = active_file.getElement(0x00281050).getValueAsInt();
-			window_width = active_file.getElement(0x00281051).getValueAsInt();
-		} catch (Exception e) {
-//			System.out.println("There are no value of window center and window width");
-		}
-		int[] gray_value_skaliert = new int[gray_value_unskaliert.length];
-		for (int i = 0; i < gray_value_unskaliert.length; i++) {
-			if (gray_value_unskaliert[i] <= (window_center-0.5-(window_width-1)/2)) {
-				gray_value_skaliert[i] = 0;
-			}else if (gray_value_unskaliert[i] > (window_center-0.5+(window_width)/2)) {
-				gray_value_skaliert[i] = 255;
-			}else {
-				gray_value_skaliert[i] =(int)(((gray_value_unskaliert[i]-(window_center-0.5))/(window_width-1)+0.5)*255);
-			}
-		}
 		
-		
-		// rendering the background picture
-		if (_show_bg) {
-			// this is the place for the code displaying a single DICOM image in the 2d viewport (exercise 2)
-			//
-			// the easiest way to set a pixel of an image is the setRGB method
-			// example: _bg_img.setRGB(x,y, 0xff00ff00)
-			//                                AARRGGBB
-			// the resulting image will be used in the Panel2d::paint() method
-			for (int i = 0; i < _w; i++) {
-				for (int j = 0; j < _h; j++) {
-					_bg_img.setRGB(i, j, 0xff000000+(gray_value_skaliert[j*_w+i]<<16)+(gray_value_skaliert[j*_w+i]<<8)+gray_value_skaliert[j*_w+i] );
-				}
-			}
-//			final int[] bg_pixels = ((DataBufferInt) _bg_img.getRaster().getDataBuffer()).getData();
-//			for (int i=0; i<bg_pixels.length; i++) {
-//				bg_pixels[i] = 0xff000000+(gray_value_skaliert[i]<<16)+(gray_value_skaliert[i]<<8)+gray_value_skaliert[i];
-//			}
-		} else {
-			// faster: access the data array directly (see below)
-			final int[] bg_pixels = ((DataBufferInt) _bg_img.getRaster().getDataBuffer()).getData();
-			for (int i=0; i<bg_pixels.length; i++) {
-				bg_pixels[i] = 0xff000000;
-			}
-		}
-*/
-		/*
 		// rendering the segmentations. each segmentation is rendered in a different image.
+		
 		for (String seg_name : _map_name_to_seg.keySet()) {
-			// here should be the code for displaying the segmentation data
-			// (exercise 3)
-
+			Segment segment = _slices.getSegment(seg_name);
+			BitMask bitMask = calculate_bitMask(segment);
 			BufferedImage seg_img = _map_seg_name_to_img.get(seg_name);
-			int[] seg_pixels = ((DataBufferInt)seg_img.getRaster().getDataBuffer()).getData();
-
 			// to drawn a segmentation image, fill the pixel array seg_pixels
 			// with ARGB values similar to exercise 2
+			for (int i = 0; i < _w; i++) {
+				for (int j = 0; j < _h; j++) {
+					seg_img.setRGB(i, j, (bitMask.get(i, j)?(0x50000000+segment.getColor()):0x00000000));
+				}
+			}
 		}
-		*/
-
 		repaint();
 	}
 	
@@ -422,8 +383,10 @@ public class Viewport2d extends Viewport implements MyObserver {
 			String seg_name = ((Segment)msg._obj).getName();
 			boolean update_needed = _map_name_to_seg.containsKey(seg_name);
 			if (update_needed) {
+				_map_name_to_seg.replace(seg_name, (Segment)msg._obj);
 				update_view();
 			}
+			
 		}
 	  }
 

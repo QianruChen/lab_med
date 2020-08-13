@@ -57,7 +57,7 @@ public class ToolRangeSelector extends JPanel  {
 
 		// range_max needs to be calculated from the bits_stored value
 		// in the current dicom series
-		int range_max = 100;
+		int range_max = 1<<(slices.getDiFile(0).getBitsStored());
 		_min = 50;
 		_max = 50;
 		
@@ -71,6 +71,8 @@ public class ToolRangeSelector extends JPanel  {
 				if (source.getValueIsAdjusting()) {
 					_min = (int)source.getValue();
 					System.out.println("_min_slider stateChanged: "+_min);
+					_seg.create_range_seg(_min, _max, slices);
+					slices.setSegment(_seg.getName(), _seg);
 				}
 			}
 		});		
@@ -82,6 +84,8 @@ public class ToolRangeSelector extends JPanel  {
 				if (source.getValueIsAdjusting()) {
 					_max = (int)source.getValue();
 					System.out.println("_max_slider stateChanged: "+_max);
+					_seg.create_range_seg(_min, _max, slices);
+					slices.setSegment(_seg.getName(), _seg);
 				}
 			}
 		});

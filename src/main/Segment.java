@@ -91,4 +91,19 @@ public class Segment {
 	public void setColor(int color) {
 		_color = color;
 	}
+	
+	public void create_range_seg(int min, int max, ImageStack slices) {
+		for (int i = 0; i < _w; i++) {
+			for (int j = 0; j < _h; j++) {
+				for (int k = 0; k < _layers.length; k++) {
+					int gray_value_original = slices.getGrayValue(i, j, k);
+					boolean is_mask = true;
+					if (gray_value_original<min||gray_value_original>max) {
+						is_mask = false;
+					}
+					_layers[k].set(i, j, is_mask);
+				}
+			}
+		}
+	}
 }
