@@ -221,17 +221,6 @@ public class Viewport2d extends Viewport implements MyObserver {
 		}
 	}
 	
-//	public int skalieren(int window_center,int window_width,int slope, int intercept, int unskaliert) {
-//		int skaliert = unskaliert*slope+intercept;
-//		if (unskaliert <= (window_center-0.5-(window_width-1)/2)) {
-//			skaliert = 0;
-//		}else if (unskaliert > (window_center-0.5+(window_width)/2)) {
-//			skaliert = 255;
-//		}else {
-//			skaliert =(int)(((unskaliert-(window_center-0.5))/(window_width-1)+0.5)*255);
-//		}
-//		return skaliert;
-//	}
 	
 	public BitMask calculate_bitMask(Segment seg) {
 		BitMask seg_image = new BitMask(_w, _h);
@@ -378,7 +367,9 @@ public class Viewport2d extends Viewport implements MyObserver {
 		if (msg._type == Message.M_NEW_ACTIVE_IMAGE) {
 			update_view();			
 		}
-		
+		if (msg._type == Message.M_WINDOW_CHANGED) {
+			update_view();
+		}
 		if (msg._type == Message.M_SEG_CHANGED) {
 			String seg_name = ((Segment)msg._obj).getName();
 			boolean update_needed = _map_name_to_seg.containsKey(seg_name);

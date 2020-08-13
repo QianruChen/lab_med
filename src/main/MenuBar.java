@@ -3,6 +3,8 @@ package main;
 import java.awt.event.*;
 import javax.swing.*;
 
+import org.omg.CORBA.IdentifierHelper;
+
 import misc.DiFileFilter;
 
 import java.io.*;
@@ -131,6 +133,9 @@ public class MenuBar extends JMenuBar {
 		item.addActionListener(newSegmentListener);
 		_menuTools.add(item);
 
+		item = new JMenuItem(new String("Fenster Einstellung"));
+		item.addActionListener(openWindowSettings);
+		_menuTools.add(item);
 		// -------------------------------------------------------------------------------------
 
 		add(_menuFile);
@@ -222,7 +227,7 @@ public class MenuBar extends JMenuBar {
 		public void actionPerformed(ActionEvent event) {
 			if (LabMed.get_is().getNumberOfImages()==0) {
 				JOptionPane.showMessageDialog(null,
-					    "Fehler: Keine DICOM Datei geöffnet",
+					    "Fehler: Keine DICOM Datei ge枚ffnet",
 					    "Inane error",
 					    JOptionPane.ERROR_MESSAGE);
 				return;
@@ -310,7 +315,7 @@ public class MenuBar extends JMenuBar {
 					    JOptionPane.ERROR_MESSAGE);
 			} else if (is.getSegmentNumber()==3) {
 					JOptionPane.showMessageDialog(_win,
-						    "In der Laborversion werden nicht mehr als drei Segmentierungen benötigt.",
+						    "In der Laborversion werden nicht mehr als drei Segmentierungen benütigt.",
 						    "Inane error",
 						    JOptionPane.ERROR_MESSAGE);
 			} else {
@@ -328,6 +333,20 @@ public class MenuBar extends JMenuBar {
 					_menu3d.add(item);
 					_tools.showTool(new ToolRangeSelector(seg));
 				}
+			}
+		}
+	};
+	ActionListener openWindowSettings = new ActionListener() {
+		public void actionPerformed(ActionEvent e) {
+			// TODO Auto-generated method stub
+			ImageStack is = LabMed.get_is();
+			if (is.getNumberOfImages()==0) {
+				JOptionPane.showMessageDialog(_win,
+					    "Fenster Einstellung ohne geöffneten DICOM Datensatz nicht möglich.",
+					    "Inane error",
+					    JOptionPane.ERROR_MESSAGE);
+			}else {
+				_tools.showTool(new ToolWindowSelector());
 			}
 		}
 	};

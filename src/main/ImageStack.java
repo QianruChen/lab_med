@@ -23,11 +23,14 @@ public class ImageStack extends MyObservable {
 	private HashMap<String, Segment> _segment_map = new HashMap<>();
 	private String _dir_name = "";
 	private int _w, _h, _active = 0;
+	private int _slope = 0;
+	private int _intercept = 0;
+	private int _window_center,_window_width = 0;
 	
 	
 	// voxel with original gray value (unskaliert)
 	private int[][][] _voxel;
-	private int[][][] _skaliert_voxel;
+//	private int[][][] _skaliert_voxel;
 	/**
 	 * Default Constructor.
 	 */
@@ -47,25 +50,26 @@ public class ImageStack extends MyObservable {
 	
 	public void createVoxel() {
 		_voxel = new int[_w][_h][getNumberOfImages()];
-		_skaliert_voxel = new int[_w][_h][getNumberOfImages()];
+//		_skaliert_voxel = new int[_w][_h][getNumberOfImages()];
 		DiFile diFile = getDiFile(0);
 		int bits_allocated = diFile.getBitsAllocated();
 		int bits_stored = getDiFile(0).getBitsStored();
-		int window_center = 1<<(bits_stored-1);
-		int window_width = 1<<(bits_stored);
+		_window_center = 1<<(bits_stored-1);
+		_window_width = 1<<(bits_stored);
 		try {
-			window_center = getDiFile(0).getElement(0x00281050).getValueAsInt();
-			window_width = getDiFile(0).getElement(0x00281051).getValueAsInt();
+			_window_center = getDiFile(0).getElement(0x00281050).getValueAsInt();
+			_window_width = getDiFile(0).getElement(0x00281051).getValueAsInt();
 		} catch (Exception e) {
 //			System.out.println("There are no value of window center and window width");
 		}
-		int slope = diFile.getElement(0x00281053).getValueAsInt();
-		int intercept = diFile.getElement(0x00281052).getValueAsInt();
+		_slope = diFile.getElement(0x00281053).getValueAsInt();
+		_intercept = diFile.getElement(0x00281052).getValueAsInt();
+		
 		for (int k = 0; k < getNumberOfImages(); k++) {
 			diFile = getDiFile(k);
 			byte[] pixel_data_byte = diFile.getElement(0x7fe00010).getValues();
 			int[] gray_value_unskaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
-			int[] gray_value_skaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
+//			int[] gray_value_skaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
 			for (int i = 0; i < pixel_data_byte.length-bits_allocated/8+1; i = i+bits_allocated/8) {
 				int gray_value = 0;
 				for (int j = 0; j < bits_allocated/8; j++) {
@@ -73,29 +77,41 @@ public class ImageStack extends MyObservable {
 					gray_value = gray_value + tmp;
 				}
 				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value;
-				int skaliert = gray_value*slope+intercept;
-				if (gray_value <= (window_center-0.5-(window_width-1)/2)) {
+				int skaliert = gray_value*_slope+_intercept;
+				if (gray_value <= (_window_center-0.5-(_window_width-1)/2)) {
 					skaliert = 0;
-				}else if (gray_value > (window_center-0.5+(window_width)/2)) {
+				}else if (gray_value > (_window_center-0.5+(_window_width)/2)) {
 					skaliert = 255;
 				}else {
-					skaliert =(int)(((gray_value-(window_center-0.5))/(window_width-1)+0.5)*255);
+					skaliert =(int)(((gray_value-(_window_center-0.5))/(_window_width-1)+0.5)*255);
 				}
-				gray_value_skaliert[i/(bits_allocated/8)] = skaliert;
+//				gray_value_skaliert[i/(bits_allocated/8)] = skaliert;
 //				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value*slope+intercept;
 			}
 			for (int i = 0; i < _w; i++) {
 				for (int j = 0; j < _h; j++) {
 					_voxel[i][j][k] = gray_value_unskaliert[j*_w+i];
-					_skaliert_voxel[i][j][k] = gray_value_skaliert[j*_w+i];
+//					_skaliert_voxel[i][j][k] = gray_value_skaliert[j*_w+i];
 				}
 			}
 		}
 		System.out.println("created volume "+_w+" "+_h+" "+ getNumberOfImages());
 	}
+	public int getSkaliertGrayValue(int unskaliert) {
+		int skaliert = unskaliert*_slope+_intercept;
+		if (unskaliert <= (_window_center-0.5-(_window_width-1)/2)) {
+			skaliert = 0;
+		}else if (unskaliert > (_window_center-0.5+(_window_width)/2)) {
+			skaliert = 255;
+		}else {
+			skaliert =(int)(((unskaliert-(_window_center-0.5))/(_window_width-1)+0.5)*255);
+		}
+		return skaliert;
+	}
 	
 	public int getSkaliertGrayValue(int i,int j,int k) {
-		return _skaliert_voxel[i][j][k];
+		
+		return getSkaliertGrayValue(_voxel[i][j][k]);
 	}
 	
 	public void setSegment(String seg_name,Segment seg) {
@@ -329,8 +345,22 @@ public class ImageStack extends MyObservable {
 	 */
 	public void setActiveImage(int i) {
 		_active = i;
-		
 	    notifyObservers(new Message(Message.M_NEW_ACTIVE_IMAGE, Integer.valueOf(i)));
 	}
+	public void setWindowCenter(int window_center) {
+		_window_center = window_center;
+		notifyObservers(new Message(Message.M_WINDOW_CHANGED));
+	}
+	public void setWindowWidth(int window_width) {
+		_window_width = window_width;
+		notifyObservers(new Message(Message.M_WINDOW_CHANGED));
+	}
+	public int getWindowCenter() {
+		return _window_center;
+	}
+	public int getWindowWidth() {
+		return _window_width;
+	}
+	
 }
 
