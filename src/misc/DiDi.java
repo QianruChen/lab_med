@@ -41,7 +41,7 @@ public final class DiDi {
     public static final int QQ = 0x3F3F; // 
     public static final int OX = 0x4F58; //
     public static final int DL = 0x444C; //
-    public static final int XX = 0x0000; //
+    public static final int XX = 0x5858; //
 
     private final HashMap<Integer,  TagMetaData> _data_element_map = new HashMap<Integer, TagMetaData>();
     private final HashMap<String,  String> _media_storage_map = new HashMap<String, String>();

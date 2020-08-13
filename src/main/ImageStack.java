@@ -23,7 +23,10 @@ public class ImageStack extends MyObservable {
 	private HashMap<String, Segment> _segment_map = new HashMap<>();
 	private String _dir_name = "";
 	private int _w, _h, _active = 0;
-
+	
+	
+	// voxel with original gray value (unskaliert)
+	private int[][][] _voxel;
 	/**
 	 * Default Constructor.
 	 */
@@ -36,7 +39,36 @@ public class ImageStack extends MyObservable {
     	}
     	return _instance;
 	}
-
+	public int getGrayValue(int i, int j,int k) {
+		return _voxel[i][j][k];
+	}
+	public void createVoxel() {
+		_voxel = new int[_w][_h][getNumberOfImages()];
+		DiFile diFile = getDiFile(0);
+		int bits_allocated = diFile.getBitsAllocated();
+		int slope = diFile.getElement(0x00281053).getValueAsInt();
+		int intercept = diFile.getElement(0x00281052).getValueAsInt();
+		for (int k = 0; k < getNumberOfImages(); k++) {
+			diFile = getDiFile(k);
+			byte[] pixel_data_byte = diFile.getElement(0x7fe00010).getValues();
+			int[] gray_value_unskaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
+			for (int i = 0; i < pixel_data_byte.length-bits_allocated/8+1; i = i+bits_allocated/8) {
+				int gray_value = 0;
+				for (int j = 0; j < bits_allocated/8; j++) {
+					int tmp = ((int)(pixel_data_byte[i+j] & 0xff))<<(8*j);
+					gray_value = gray_value + tmp;
+				}
+				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value*slope+intercept;
+			}
+			for (int i = 0; i < _w; i++) {
+				for (int j = 0; j < _h; j++) {
+					_voxel[i][j][k] = gray_value_unskaliert[j*_w+i];
+				}
+			}
+		}
+		System.out.println("created volume "+_w+" "+_h+" "+ getNumberOfImages());
+	}
+	
 	/**
 	 * Reads all DICOM files from the given directory. All files are checked
 	 * for correctness before loading. The load process is implemented as a thread.
@@ -51,7 +83,6 @@ public class ImageStack extends MyObservable {
 		// loading thread
 		Thread t = new Thread() {
 			JProgressBar progress_bar;
-			
 			// returns the image number of a dicom file or -1 if something wents wrong
 			private int check_file(File file) {
 				int result = -1;
@@ -142,15 +173,17 @@ public class ImageStack extends MyObservable {
 					// initialize default image width and heigth from the first image read
 					if (_w==0) _w = df.getImageWidth();
 					if (_h==0) _h = df.getImageHeight();
+					
 
 				    notifyObservers(new Message(Message.M_NEW_IMAGE_LOADED));					
 				}
-			    
 			    progress_win.setVisible(false);
+			    createVoxel();
+			    setActiveImage(0);
 			}
 		};
 		
-		t.start();	    
+		t.start();  
 	}
 
 	/**
@@ -259,7 +292,7 @@ public class ImageStack extends MyObservable {
 	 */
 	public void setActiveImage(int i) {
 		_active = i;
-
+		
 	    notifyObservers(new Message(Message.M_NEW_ACTIVE_IMAGE, Integer.valueOf(i)));
 	}
 }
