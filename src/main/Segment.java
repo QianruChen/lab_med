@@ -106,4 +106,15 @@ public class Segment {
 			}
 		}
 	}
+
+	public void reset() {
+		for (int i = 0; i < _layers.length; i++) {
+			for (int j = 0; j < _w; j++) {
+				for (int k = 0; k < _h; k++) {
+					getMask(i).set(j, k, false);
+				}
+			}
+		}
+		
+	}
 }

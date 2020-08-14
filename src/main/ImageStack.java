@@ -26,6 +26,7 @@ public class ImageStack extends MyObservable {
 	private int _slope = 0;
 	private int _intercept = 0;
 	private int _window_center,_window_width = 0;
+	private double _varianz_region_grow = 0.1;
 	
 	
 	// voxel with original gray value (unskaliert)
@@ -95,7 +96,7 @@ public class ImageStack extends MyObservable {
 				}
 			}
 		}
-		System.out.println("created volume "+_w+" "+_h+" "+ getNumberOfImages());
+//		System.out.println("created volume "+_w+" "+_h+" "+ getNumberOfImages());
 	}
 	public int getSkaliertGrayValue(int unskaliert) {
 		int skaliert = unskaliert*_slope+_intercept;
@@ -362,5 +363,94 @@ public class ImageStack extends MyObservable {
 		return _window_width;
 	}
 	
+	public void calculate_region_grow(int x, int y, int z) {
+		if (!_segment_map.containsKey("region grow")) {
+			createSegment("region grow");
+		}
+		Segment checked_segment = new Segment("checked", _w, _h, getNumberOfImages());
+		Queue<String> uncheckedQueue = new LinkedList<>();
+//		Queue<String> checkedStrings = new LinkedList<>();
+		uncheckedQueue.add(position2String(x, y, z));
+		checked_segment.getMask(z).set(x, y, true);
+		String[] candidates = new String[6];
+		String seed = position2String(x, y, z);
+		String candidate = "";
+		_segment_map.get("region grow").getMask(z).set(x, y, true);
+		int[] index_candidate = new int[3];
+		int tmp = 0;
+		String center = "";
+		while (!uncheckedQueue.isEmpty()) {
+			tmp++;
+			center = uncheckedQueue.poll();
+			candidates = getNeighborCandidates(center);
+			for (int i = 0; i < candidates.length; i++) {
+				candidate = candidates[i];
+				index_candidate = string2position(candidate);
+				if (index_candidate[0]==-1) {
+					continue;
+				}
+				if (checked_segment.getMask(index_candidate[2]).get(index_candidate[0], index_candidate[1])) {
+					continue;
+				}
+				checked_segment.getMask(index_candidate[2]).set(index_candidate[0], index_candidate[1],true);
+				if (is_belong(seed, candidate)) {
+					uncheckedQueue.add(candidate);
+					_segment_map.get("region grow").getMask(index_candidate[2]).set(index_candidate[0], index_candidate[1], true);
+				}else {
+					_segment_map.get("region grow").getMask(index_candidate[2]).set(index_candidate[0], index_candidate[1], false);
+				}
+			}
+		}
+		System.out.println(tmp);
+		notifyObservers(new Message(Message.M_SEG_CHANGED, _segment_map.get("region grow")));
+	}
+	private boolean is_belong(String seed,String candidate) {
+		int[] seed_position = string2position(seed);
+		int[] candidate_position = string2position(candidate);
+		int seed_value = getGrayValue(seed_position[0], seed_position[1], seed_position[2]);
+		int candidate_value = getGrayValue(candidate_position[0], candidate_position[1], candidate_position[2]);
+		if (candidate_value<(seed_value-_varianz_region_grow*seed_value)) {
+			return false;
+		}
+		if (candidate_value>(seed_value+_varianz_region_grow*seed_value)) {
+			return false;
+		}
+		return true;
+	}
+	private String[] getNeighborCandidates(String string) {
+		int[] position = string2position(string);
+		int x = position[0];
+		int y = position[1];
+		int z = position[2];
+		String[] candidates = new String[6];
+//		if (x-1>=0) candidates[0]=(position2String(x-1, y, z));
+//		if (y-1>=0) candidates[1]=(position2String(x, y-1, z));
+//		if (z-1>=0) candidates[2]=(position2String(x, y, z-1));
+//		if (x+1<_w) candidates[3]=(position2String(x+1, y, z));
+//		if (y+1<_h) candidates[4]=(position2String(x, y+1, z));
+//		if (z+1<getNumberOfImages()) candidates[5]=(position2String(x, y, z+1));
+		candidates[0] = (x-1>=0)?(position2String(x-1, y, z)):"";
+		candidates[1] = (y-1>=0)?(position2String(x, y-1, z)):"";
+		candidates[2] = (z-1>=0)?(position2String(x, y, z-1)):"";
+		candidates[3] = (x+1<_w)?(position2String(x+1, y, z)):"";
+		candidates[4] = (y+1<_h)?(position2String(x, y+1, z)):"";
+		candidates[5] = (z+1<getNumberOfImages())?(position2String(x, y, z+1)):"";
+		return candidates;
+	}
+	private int[] string2position(String string) {
+		int[] index = new int[3];
+		if (string.length()!=6) {
+			index[0] = -1;
+			return index;
+		}
+		index[0] = Integer.parseInt(string.substring(0,2),16);
+		index[1] = Integer.parseInt(string.substring(2,4),16);
+		index[2] = Integer.parseInt(string.substring(4,6),16);
+		return index;
+	}
+	private String position2String(int x,int y,int z) {
+		String position = Integer.toHexString(0x100|x).substring(1)+Integer.toHexString(0x100|y).substring(1)+Integer.toHexString(0x100|z).substring(1);
+		return position;
+	}
 }
 

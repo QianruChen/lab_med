@@ -87,6 +87,10 @@ public class MenuBar extends JMenuBar {
 		item.addActionListener(toggleBGListener2d);		
 		_menu2d.add(item);
 		
+		item = new JCheckBoxMenuItem(new String("Region Grow"),false);
+		item.addActionListener(toggleRegionGrowListener);
+		_menu2d.add(item);
+		
 		JRadioButtonMenuItem rbMenuItem;
 		ButtonGroup group = new ButtonGroup();
 
@@ -272,6 +276,20 @@ public class MenuBar extends JMenuBar {
 		}
 	};
 
+	ActionListener toggleRegionGrowListener = new ActionListener() {
+		public void actionPerformed(ActionEvent e) {
+			ImageStack is = LabMed.get_is();
+			if (is.getNumberOfImages()==0) {
+				JOptionPane.showMessageDialog(_win,
+					    "Fenster Einstellung ohne geöffneten DICOM Datensatz nicht möglich.",
+					    "Inane error",
+					    JOptionPane.ERROR_MESSAGE);
+			}else {
+				is.createSegment("region grow");
+				_v2d.toggleRegionGrow();
+			}
+		}
+	};
 	/**
 	 * ActionListener for toggling the 3d background image.
 	 */

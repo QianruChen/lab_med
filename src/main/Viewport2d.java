@@ -53,8 +53,7 @@ public class Viewport2d extends Viewport implements MyObserver {
 
 	// transversal:0, sagital:1, frontal:2
 	private int _view_mode;
-//	// volume with original gray value (unskaliert)
-//	private int[][][] _volume;
+	private boolean _region_grow;
 	/**
 	 * Private class, implementing the GUI element for displaying the 2d data.
 	 * Implements the MouseListener Interface.
@@ -72,6 +71,12 @@ public class Viewport2d extends Viewport implements MyObserver {
 
 		public void mouseClicked ( java.awt.event.MouseEvent e ) { 
 			System.out.println("Panel2d::mouseClicked: x="+e.getX()+" y="+e.getY());
+			System.out.println("region grow: "+_region_grow);
+			if (_region_grow) {
+				int[] position = calculate_seed_index(e.getX(),e.getY());
+				_slices.getSegment("region grow").reset();
+				_slices.calculate_region_grow(position[0], position[1], position[2]);
+			}
 		}
 		public void mousePressed ( java.awt.event.MouseEvent e ) {}
 		public void mouseReleased( java.awt.event.MouseEvent e ) {}
@@ -140,7 +145,7 @@ public class Viewport2d extends Viewport implements MyObserver {
 	 */
 	public Viewport2d() {
 		super();
-		
+		_region_grow = false;
 		_slice_names = new DefaultListModel<String>();
 		_slice_names.addElement(" ----- ");
 		
@@ -164,31 +169,6 @@ public class Viewport2d extends Viewport implements MyObserver {
 		
 	}
 
-//	public void createVolume() {
-//		_volume = new int[_slices.getImageWidth()][_slices.getImageHeight()][_slices.getNumberOfImages()];
-//		DiFile diFile = _slices.getDiFile(0);
-//		int bits_allocated = diFile.getBitsAllocated();
-//		int slope = diFile.getElement(0x00281053).getValueAsInt();
-//		int intercept = diFile.getElement(0x00281052).getValueAsInt();
-//		for (int k = 0; k < _slices.getNumberOfImages(); k++) {
-//			diFile = _slices.getDiFile(k);
-//			byte[] pixel_data_byte = diFile.getElement(0x7fe00010).getValues();
-//			int[] gray_value_unskaliert = new int[pixel_data_byte.length/(bits_allocated/8)];
-//			for (int i = 0; i < pixel_data_byte.length-bits_allocated/8+1; i = i+bits_allocated/8) {
-//				int gray_value = 0;
-//				for (int j = 0; j < bits_allocated/8; j++) {
-//					int tmp = ((int)(pixel_data_byte[i+j] & 0xff))<<(8*j);
-//					gray_value = gray_value + tmp;
-//				}
-//				gray_value_unskaliert[i/(bits_allocated/8)] = gray_value*slope+intercept;
-//			}
-//			for (int i = 0; i < _slices.getImageWidth(); i++) {
-//				for (int j = 0; j < _slices.getImageHeight(); j++) {
-//					_volume[i][j][k] = gray_value_unskaliert[j*_w+i];
-//				}
-//			}
-//		}
-//	}
 
 	/**
 	 * This is private method is called when the current image width + height don't
@@ -447,4 +427,51 @@ public class Viewport2d extends Viewport implements MyObserver {
 		reallocate();
 		_slices.setActiveImage(0);
 	}
+
+	public boolean toggleRegionGrow() {
+		_region_grow = !_region_grow;
+		if (!_region_grow) {
+			_map_name_to_seg.remove("region grow");
+			_map_seg_name_to_img.remove("region grow");
+			_slices.getSegment("region grow").reset();
+			update_view();
+			return _region_grow;
+		}
+		if (!_map_name_to_seg.containsKey("region grow")) {
+			_map_name_to_seg.put("region grow", _slices.getSegment("region grow"));
+		}if (!_map_seg_name_to_img.containsKey("region grow")) {
+			_map_seg_name_to_img.put("region grow", new BufferedImage(_w, _h, BufferedImage.TYPE_INT_ARGB));
+		}
+		update_view();
+		return _region_grow;
+	}
+	
+	public int[] calculate_seed_index(int x, int y) {
+		int[] position = new int[3];
+		int width = (int)((double)x*(_w-1)/DEF_WIDTH);
+		int height = (int)((double)y*(_h-1)/DEF_HEIGHT);
+		width = (width<_w)?width:_w-1;
+		height = (height<_h)?height:_h-1;
+		switch (_view_mode) {
+		case 0:
+			position[0] = width;
+			position[1] = height;
+			position[2] = _slices.getActiveImageID();
+			break;
+		case 1:
+			position[0] = _slices.getActiveImageID();
+			position[1] = width;
+			position[2] = height;
+			break;
+		case 2:
+			position[0] = width;
+			position[1] = _slices.getActiveImageID();
+			position[2] = height;
+			break;
+		default:
+			break;
+		}
+		return position;
+	}
+	
 }
