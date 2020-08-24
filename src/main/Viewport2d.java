@@ -14,6 +14,7 @@ import java.util.Iterator;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
@@ -72,6 +73,12 @@ public class Viewport2d extends Viewport implements MyObserver {
 		public void mouseClicked ( java.awt.event.MouseEvent e ) { 
 			System.out.println("Panel2d::mouseClicked: x="+e.getX()+" y="+e.getY());
 			System.out.println("region grow: "+_region_grow);
+			if (_slices.getNumberOfImages()==0) {
+				return;
+			}
+			if (!_slices.getSegNames().contains("region grow")) {
+				return;
+			}
 			if (_region_grow) {
 				int[] position = calculate_seed_index(e.getX(),e.getY());
 				_slices.getSegment("region grow").reset();
@@ -431,18 +438,18 @@ public class Viewport2d extends Viewport implements MyObserver {
 	public boolean toggleRegionGrow() {
 		_region_grow = !_region_grow;
 		if (!_region_grow) {
-			_map_name_to_seg.remove("region grow");
-			_map_seg_name_to_img.remove("region grow");
-			_slices.getSegment("region grow").reset();
-			update_view();
+//			_map_name_to_seg.remove("region grow");
+//			_map_seg_name_to_img.remove("region grow");
+//			_slices.getSegment("region grow").reset();
+//			update_view();
 			return _region_grow;
 		}
-		if (!_map_name_to_seg.containsKey("region grow")) {
-			_map_name_to_seg.put("region grow", _slices.getSegment("region grow"));
-		}if (!_map_seg_name_to_img.containsKey("region grow")) {
-			_map_seg_name_to_img.put("region grow", new BufferedImage(_w, _h, BufferedImage.TYPE_INT_ARGB));
-		}
-		update_view();
+//		if (!_map_name_to_seg.containsKey("region grow")) {
+//			_map_name_to_seg.put("region grow", _slices.getSegment("region grow"));
+//		}if (!_map_seg_name_to_img.containsKey("region grow")) {
+//			_map_seg_name_to_img.put("region grow", new BufferedImage(_w, _h, BufferedImage.TYPE_INT_ARGB));
+//		}
+//		update_view();
 		return _region_grow;
 	}
 	

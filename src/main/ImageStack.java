@@ -452,5 +452,10 @@ public class ImageStack extends MyObservable {
 		String position = Integer.toHexString(0x100|x).substring(1)+Integer.toHexString(0x100|y).substring(1)+Integer.toHexString(0x100|z).substring(1);
 		return position;
 	}
+
+	public void setDistance(int distance) {
+		// TODO Auto-generated method stub
+		notifyObservers(new Message(Message.M_DISTANCE_CHANGED,distance));
+	}
 }
 

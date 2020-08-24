@@ -5,6 +5,8 @@ import javax.swing.*;
 
 import org.omg.CORBA.IdentifierHelper;
 
+import com.sun.xml.internal.bind.v2.runtime.Name;
+
 import misc.DiFileFilter;
 
 import java.io.*;
@@ -87,7 +89,7 @@ public class MenuBar extends JMenuBar {
 		item.addActionListener(toggleBGListener2d);		
 		_menu2d.add(item);
 		
-		item = new JCheckBoxMenuItem(new String("Region Grow"),false);
+		item = new JCheckBoxMenuItem(new String("Region Grow Progress"),false);
 		item.addActionListener(toggleRegionGrowListener);
 		_menu2d.add(item);
 		
@@ -139,6 +141,10 @@ public class MenuBar extends JMenuBar {
 
 		item = new JMenuItem(new String("Fenster Einstellung"));
 		item.addActionListener(openWindowSettings);
+		_menuTools.add(item);
+		
+		item = new JMenuItem(new String("Abstand des Raumgitters"));
+		item.addActionListener(distanceSettings);
 		_menuTools.add(item);
 		// -------------------------------------------------------------------------------------
 
@@ -231,7 +237,7 @@ public class MenuBar extends JMenuBar {
 		public void actionPerformed(ActionEvent event) {
 			if (LabMed.get_is().getNumberOfImages()==0) {
 				JOptionPane.showMessageDialog(null,
-					    "Fehler: Keine DICOM Datei ge枚ffnet",
+					    "Fehler: Keine DICOM Datei geöffnet",
 					    "Inane error",
 					    JOptionPane.ERROR_MESSAGE);
 				return;
@@ -284,9 +290,30 @@ public class MenuBar extends JMenuBar {
 					    "Fenster Einstellung ohne geöffneten DICOM Datensatz nicht möglich.",
 					    "Inane error",
 					    JOptionPane.ERROR_MESSAGE);
-			}else {
-				is.createSegment("region grow");
 				_v2d.toggleRegionGrow();
+			}else if (is.getSegmentNumber()==3) {
+				JOptionPane.showMessageDialog(_win,
+					    "In der Laborversion werden nicht mehr als drei Segmentierungen benütigt.",
+					    "Inane error",
+					    JOptionPane.ERROR_MESSAGE);
+				_v2d.toggleRegionGrow();
+			}else {
+				String name = "region grow";
+				_no_entries2d.setVisible(false);
+				_no_entries3d.setVisible(false);
+				if (is.getSegNames().contains(name)) {
+					_v2d.toggleRegionGrow();
+					return;
+				}
+				Segment segment = is.createSegment("region grow");
+				_v2d.toggleRegionGrow();
+				_v2d.toggleSeg(segment);
+				JMenuItem item = new JCheckBoxMenuItem(name, true);
+				item.addActionListener(toggleSegListener2d);
+				_menu2d.add(item);
+				item = new JCheckBoxMenuItem(name, false);
+				item.addActionListener(toggleSegListener3d);
+				_menu3d.add(item);
 			}
 		}
 	};
@@ -365,6 +392,20 @@ public class MenuBar extends JMenuBar {
 					    JOptionPane.ERROR_MESSAGE);
 			}else {
 				_tools.showTool(new ToolWindowSelector());
+			}
+		}
+	};
+	ActionListener distanceSettings = new ActionListener() {
+		public void actionPerformed(ActionEvent e) {
+			// TODO Auto-generated method stub
+			ImageStack is = LabMed.get_is();
+			if (is.getNumberOfImages()==0) {
+				JOptionPane.showMessageDialog(_win,
+					    "Fenster Einstellung ohne geöffneten DICOM Datensatz nicht möglich.",
+					    "Inane error",
+					    JOptionPane.ERROR_MESSAGE);
+			}else {
+				_tools.showTool(new ToolDistanceSelector());
 			}
 		}
 	};
