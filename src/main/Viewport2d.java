@@ -21,6 +21,8 @@ import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import com.sun.org.apache.bcel.internal.generic.RETURN;
+
 import misc.BitMask;
 import misc.DiFile;
 import misc.MyObservable;
@@ -481,4 +483,62 @@ public class Viewport2d extends Viewport implements MyObserver {
 		return position;
 	}
 	
+	public BufferedImage getBGImage(int mode, int pos, int alpha) {
+		int w = 0;
+		int h = 0;
+		BufferedImage image = null;
+		switch (mode) {
+		case 0:
+			w = _slices.getImageWidth();
+			h = _slices.getImageHeight();
+			image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+			for (int i = 0; i < w; i++) {
+				for (int j = 0; j < h; j++) {
+					int value_skaliert = _slices.getSkaliertGrayValue(i, j, pos);
+					alpha = (alpha==-1)?value_skaliert:alpha;
+					image.setRGB(i, j, (alpha<<24)+(value_skaliert<<16)+(value_skaliert<<8)+value_skaliert );
+				}
+			}
+			break;
+		case 1:
+			w = _slices.getImageHeight();
+			h = _slices.getNumberOfImages();
+			image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+			for (int i = 0; i < w; i++) {
+				for (int j = 0; j < h; j++) {
+					int value_skaliert = _slices.getSkaliertGrayValue(pos, i, j);
+					alpha = (alpha==-1)?value_skaliert:alpha;
+					image.setRGB(i, j, (alpha<<24)+(value_skaliert<<16)+(value_skaliert<<8)+value_skaliert );
+				}
+			}
+			break;
+		case 2:
+			w = _slices.getImageWidth();
+			h = _slices.getNumberOfImages();
+			image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+			for (int i = 0; i < w; i++) {
+				for (int j = 0; j < h; j++) {
+					int value_skaliert = _slices.getSkaliertGrayValue(i, pos, j);
+					alpha = (alpha==-1)?value_skaliert:alpha;
+					image.setRGB(i, j, (alpha<<24)+(value_skaliert<<16)+(value_skaliert<<8)+value_skaliert );
+				}
+			}
+			break;
+		default:
+			break;
+		}
+		return image;
+	}
+	
+	
+	public int getViewMode() {
+		return _view_mode;
+	}
+	
+	public int getW() {
+		return _w;
+	}
+	public int getH() {
+		return _h;
+	}
 }

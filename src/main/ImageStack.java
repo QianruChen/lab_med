@@ -423,12 +423,6 @@ public class ImageStack extends MyObservable {
 		int y = position[1];
 		int z = position[2];
 		String[] candidates = new String[6];
-//		if (x-1>=0) candidates[0]=(position2String(x-1, y, z));
-//		if (y-1>=0) candidates[1]=(position2String(x, y-1, z));
-//		if (z-1>=0) candidates[2]=(position2String(x, y, z-1));
-//		if (x+1<_w) candidates[3]=(position2String(x+1, y, z));
-//		if (y+1<_h) candidates[4]=(position2String(x, y+1, z));
-//		if (z+1<getNumberOfImages()) candidates[5]=(position2String(x, y, z+1));
 		candidates[0] = (x-1>=0)?(position2String(x-1, y, z)):"";
 		candidates[1] = (y-1>=0)?(position2String(x, y-1, z)):"";
 		candidates[2] = (z-1>=0)?(position2String(x, y, z-1)):"";

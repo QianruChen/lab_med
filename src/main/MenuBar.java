@@ -126,7 +126,34 @@ public class MenuBar extends JMenuBar {
 		item = new JCheckBoxMenuItem(new String("Show original Data"), false);		
 		item.addActionListener(toggleBGListener3d);		
 		_menu3d.add(item);
+		
+		_menu3d.addSeparator();		
+		
+		JRadioButtonMenuItem rbMenuItem3d;
+		ButtonGroup group3d = new ButtonGroup();
 
+		rbMenuItem3d = new JRadioButtonMenuItem("Transversal Rendering");
+		rbMenuItem3d.addActionListener(setRenderingModeListener);
+		group3d.add(rbMenuItem3d);
+		_menu3d.add(rbMenuItem3d);
+		rbMenuItem3d.setSelected(true);
+
+		rbMenuItem3d = new JRadioButtonMenuItem("Sagittal Rendering");
+		rbMenuItem3d.addActionListener(setRenderingModeListener);
+		group3d.add(rbMenuItem3d);
+		_menu3d.add(rbMenuItem3d);
+
+		rbMenuItem3d = new JRadioButtonMenuItem("Frontal Rendering");
+		rbMenuItem3d.addActionListener(setRenderingModeListener);
+		group3d.add(rbMenuItem3d);
+		_menu3d.add(rbMenuItem3d);
+		
+		rbMenuItem3d = new JRadioButtonMenuItem("Alle Ebenen Rendering");
+		rbMenuItem3d.addActionListener(setRenderingModeListener);
+		group3d.add(rbMenuItem3d);
+		_menu3d.add(rbMenuItem3d);
+
+		
 		_menu3d.addSeparator();		
 
 		_no_entries3d = new JMenuItem(new String("no segmentations yet"));
@@ -273,6 +300,21 @@ public class MenuBar extends JMenuBar {
 		}
 	};
 
+	ActionListener setRenderingModeListener = new ActionListener() {
+		@Override
+		public void actionPerformed(ActionEvent event) {
+			String name = event.getActionCommand();
+			if (name.equals("Transversal Rendering")) {
+				_v3d.setRenderingMode(0);
+			} else if (name.equals("Sagittal Rendering")) {
+				_v3d.setRenderingMode(1);
+			} else if (name.equals("Frontal Rendering")) {
+				_v3d.setRenderingMode(2);
+			}else {
+				_v3d.setRenderingMode(3);
+			}
+		}
+	};
 	/**
 	 * ActionListener for toggling the 2d background image.
 	 */
