@@ -6,6 +6,10 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.GraphicsConfiguration;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Set;
 
 import javax.media.j3d.Appearance;
 import javax.media.j3d.BoundingBox;
@@ -15,6 +19,7 @@ import javax.media.j3d.Canvas3D;
 import javax.media.j3d.ColoringAttributes;
 import javax.media.j3d.GeometryArray;
 import javax.media.j3d.ImageComponent2D;
+import javax.media.j3d.IndexedTriangleArray;
 import javax.media.j3d.PointArray;
 import javax.media.j3d.PolygonAttributes;
 import javax.media.j3d.QuadArray;
@@ -23,11 +28,13 @@ import javax.media.j3d.Texture2D;
 import javax.media.j3d.Transform3D;
 import javax.media.j3d.TransformGroup;
 import javax.media.j3d.TransparencyAttributes;
+import javax.media.j3d.TriangleArray;
 import javax.media.j3d.View;
 import javax.vecmath.Color3f;
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3f;
 import javax.vecmath.TexCoord2f;
+import javax.vecmath.Tuple3f;
 
 import com.sun.j3d.utils.behaviors.mouse.MouseRotate;
 import com.sun.j3d.utils.behaviors.mouse.MouseTranslate;
@@ -35,6 +42,8 @@ import com.sun.j3d.utils.behaviors.mouse.MouseZoom;
 import com.sun.j3d.utils.geometry.ColorCube;
 import com.sun.j3d.utils.universe.SimpleUniverse;
 
+import main.MarchingCube.Triangle;
+import misc.BitMask;
 import misc.MyObservable;
 import misc.MyObserver;
 
@@ -118,6 +127,9 @@ public class Viewport3d extends Viewport implements MyObserver  {
 	private Shape3D[] _planes = null;
 	private int _rendering_mode = 0;
 	private int _step = 2;
+	private MarchingCube _marchingCube;
+	private int _magic_size = 4;
+	
 
 	/**
 	 * Constructor, with a reference to the global image stack as argument.
@@ -130,7 +142,9 @@ public class Viewport3d extends Viewport implements MyObserver  {
 		this.setLayout( new BorderLayout() );
 		GraphicsConfiguration config = SimpleUniverse.getPreferredConfiguration();
 		_panel3d = new Panel3d( config );		
-        this.add(_panel3d, BorderLayout.CENTER );        
+        this.add(_panel3d, BorderLayout.CENTER );     
+        _marchingCube = MarchingCube.getInstance();
+        _marchingCube.create_lut();
 	}
 
 	/**
@@ -143,23 +157,29 @@ public class Viewport3d extends Viewport implements MyObserver  {
 			update_planes();
 		}
 		//Textur basiertes Volume Rendering
-		for (int i = 0; i < _planes.length; i++) {
-			Shape3D shape3d = new Shape3D(_planes[i].getGeometry(), _planes[i].getAppearance());
-			transformGroup.addChild(shape3d);
+		if (_show_bg) {
+			for (int i = 0; i < _planes.length; i++) {
+				Shape3D shape3d = new Shape3D(_planes[i].getGeometry(), _planes[i].getAppearance());
+				transformGroup.addChild(shape3d);
+			} 
 		}
 		//shape plane ortho slice
 		int active_img_id = _slices.getActiveImageID();
 		Shape3D shape3d_plane = createShapePlane(mode, active_img_id, 0x80);
 		transformGroup.addChild(shape3d_plane);
 		//Segment Darstellung
+//		for (String seg_name : _map_name_to_seg.keySet()) {
+//			Shape3D shape3d = computeSegmentPointShape(seg_name);
+//			if (shape3d == null) {
+//				continue;
+//			}
+//			transformGroup.addChild(shape3d);
+//		}
+		//Marching cube Darstellung
 		for (String seg_name : _map_name_to_seg.keySet()) {
-			Shape3D shape3d = computeSegmentShape(seg_name);
-			if (shape3d == null) {
-				continue;
-			}
+			Shape3D shape3d = computeSegmentTriangleShape(seg_name);
 			transformGroup.addChild(shape3d);
 		}
-		
 		//update
 	    MouseRotate mouseRotate = new MouseRotate();
 	    MouseZoom mouseZoom = new MouseZoom();
@@ -224,8 +244,112 @@ public class Viewport3d extends Viewport implements MyObserver  {
 		}
 	}
 	
-	
-	public Shape3D computeSegmentShape(String seg_name) {
+	public Shape3D computeSegmentTriangleShape(String seg_name) {
+		Segment segment = _slices.getSegment(seg_name);
+		LinkedList<Point3f> seg_trias = new LinkedList<Point3f>();
+		HashMap<Point3f, LinkedList<Integer>> point_indexs_map = new HashMap<>();
+		int index = 0;
+		int w = _slices.getImageWidth();
+		int h = _slices.getImageHeight();
+		int num_images = _slices.getNumberOfImages();
+		BitMask bitMask_up;
+		BitMask bitMask_down;
+		Point3f trans = new Point3f();
+		for (int z = 0; z < num_images-_magic_size; z = z+_magic_size) {
+			bitMask_up = segment.getMask(z);
+			bitMask_down = segment.getMask(z+_magic_size);
+			for (int x = 0; x < w - _magic_size; x = x+_magic_size) {
+				for (int y = 0; y < h - _magic_size; y = y+_magic_size) {
+					int key = calculate_key(x, y, bitMask_up, bitMask_down);
+					if (key == 0 || key == 255) {
+						continue;
+					}
+					Triangle[] triangles = _marchingCube.get_Triangles(key);
+					for (int i = 0; i < triangles.length; i++) {
+						trans = new Point3f(x,y,z);
+						Point3f a = new Point3f(triangles[i].getVertex0());
+						Point3f b = new Point3f(triangles[i].getVertex1());
+						Point3f c = new Point3f(triangles[i].getVertex2());
+						
+						a.scale(_magic_size);
+						b.scale(_magic_size);
+						c.scale(_magic_size);
+						a.add(trans);
+						b.add(trans);
+						c.add(trans);
+						
+						a.set(a.x/w-0.5f, a.y/h-0.5f, a.z/num_images-0.5f);
+						b.set(b.x/w-0.5f, b.y/h-0.5f, b.z/num_images-0.5f);
+						c.set(c.x/w-0.5f, c.y/h-0.5f, c.z/num_images-0.5f);
+						
+						seg_trias.add(a);
+						seg_trias.add(b);
+						seg_trias.add(c);
+						if (point_indexs_map.containsKey(a)) {
+							point_indexs_map.get(a).add(index);
+						}else {
+							LinkedList<Integer> indexs = new LinkedList<>();
+							indexs.add(index);
+							point_indexs_map.put(a, indexs);
+						}
+						if (point_indexs_map.containsKey(b)) {
+							point_indexs_map.get(a).add(index+1);
+						}else {
+							LinkedList<Integer> indexs = new LinkedList<>();
+							indexs.add(index+1);
+							point_indexs_map.put(b, indexs);
+						}
+						if (point_indexs_map.containsKey(c)) {
+							point_indexs_map.get(c).add(index+2);
+						}else {
+							LinkedList<Integer> indexs = new LinkedList<>();
+							indexs.add(index+2);
+							point_indexs_map.put(c, indexs);
+						}
+						index = index + 3;
+					}
+				}
+			}
+		}
+		
+		Point3f[] seg_trias_vertexs = new Point3f[seg_trias.size()];
+		seg_trias.toArray(seg_trias_vertexs);
+		Set<Point3f> seg_trias_set = new HashSet<>(seg_trias);
+		Point3f[] seg_trias_vertexs_unique = new Point3f[seg_trias_set.size()];
+		seg_trias_set.toArray(seg_trias_vertexs_unique);
+		System.out.println("Points of triangles: "+seg_trias_vertexs.length);
+		System.out.println("Unique points of triangles: "+seg_trias_vertexs_unique.length);
+//		IndexedTriangleArray itrias = new IndexedTriangleArray(seg_trias_vertexs_unique.length, IndexedTriangleArray.COORDINATES|IndexedTriangleArray.NORMALS, seg_trias_vertexs.length);
+//		for (int i = 0; i < seg_trias_vertexs_unique.length; i++) {
+//			itrias.setCoordinate(i, seg_trias_vertexs_unique[i]);
+//			for (Integer integer : point_indexs_map.get(seg_trias_vertexs_unique[i])) {
+//				itrias.setCoordinateIndex(integer, i);
+//			}
+//		}
+		TriangleArray itrias = new TriangleArray(seg_trias_vertexs.length, TriangleArray.COORDINATES|TriangleArray.NORMALS);
+		for (int i = 0; i < seg_trias_vertexs.length; i++) {
+			itrias.setCoordinate(i, seg_trias_vertexs[i]);
+		}
+		Color3f color = new Color3f(new Color(segment.getColor()));
+		ColoringAttributes color_ca = new ColoringAttributes(color,ColoringAttributes.FASTEST);
+		Appearance appearance_segment = new Appearance();
+		appearance_segment.setColoringAttributes(color_ca);
+		Shape3D shape3d = new Shape3D(itrias, appearance_segment);
+		return shape3d;
+	}
+	public int calculate_key(int x, int y, BitMask bitMask_up, BitMask bitMask_down) {
+		int key = 0;
+		key = bitMask_up.get(x, y) ? (key+1):key;
+		key = bitMask_up.get(x+1, y) ? (key+(1<<1)):key;
+		key = bitMask_up.get(x+1, y+1) ? (key+(1<<2)):key;
+		key = bitMask_up.get(x, y+1) ? (key+(1<<3)):key;
+		key = bitMask_down.get(x, y) ? (key+(1<<4)):key;
+		key = bitMask_down.get(x+1, y) ? (key+(1<<5)):key;
+		key = bitMask_down.get(x+1, y+1) ? (key+(1<<6)):key;
+		key = bitMask_down.get(x, y+1) ? (key+(1<<7)):key;
+		return key;
+	}
+	public Shape3D computeSegmentPointShape(String seg_name) {
 		Segment segment = _slices.getSegment(seg_name);
 		int count = 0;
 		int w = _slices.getImageWidth();
