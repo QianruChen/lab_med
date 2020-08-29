@@ -136,10 +136,10 @@ public class Viewport3d extends Viewport implements MyObserver  {
 	private int _step = 2;
 	private MarchingCube _marchingCube;
 	private int _magic_size = 0;
-	private HashMap<String, GeometryArray> _seg_GeoArray_map_1;
-	private HashMap<String, GeometryArray> _seg_GeoArray_map_2;
-	private HashMap<String, GeometryArray> _seg_GeoArray_map_3;
-	private HashMap<String, GeometryArray> _seg_GeoArray_map_4;
+	private HashMap<String, GeometryArray> _seg_geoArray_map_1;
+	private HashMap<String, GeometryArray> _seg_geoArray_map_2;
+	private HashMap<String, GeometryArray> _seg_geoArray_map_3;
+	private HashMap<String, GeometryArray> _seg_geoArray_map_4;
 	
 
 	/**
@@ -156,6 +156,10 @@ public class Viewport3d extends Viewport implements MyObserver  {
         this.add(_panel3d, BorderLayout.CENTER );     
         _marchingCube = MarchingCube.getInstance();
         _marchingCube.create_lut();
+    	_seg_geoArray_map_1 = new HashMap<>();
+    	_seg_geoArray_map_2 = new HashMap<>();
+    	_seg_geoArray_map_3 = new HashMap<>();
+    	_seg_geoArray_map_4 = new HashMap<>();
 	}
 
 	/**
@@ -193,7 +197,8 @@ public class Viewport3d extends Viewport implements MyObserver  {
 		}else {
 					//Marching cube Darstellung
 			for (String seg_name : _map_name_to_seg.keySet()) {
-				Shape3D shape3d = computeSegmentTriangleShape(seg_name);
+//				Shape3D shape3d = computeSegmentTriangleShape(seg_name);
+				Shape3D shape3d = new Shape3D(get_seg_geoArray(seg_name), getAppearance(seg_name));
 				transformGroup.addChild(shape3d);
 			}
 		}
@@ -280,6 +285,18 @@ public class Viewport3d extends Viewport implements MyObserver  {
 
 		if (msg._type == Message.M_SEG_CHANGED) {
 			String seg_name = ((Segment)(msg._obj)).getName();
+			if (_seg_geoArray_map_1.containsKey(seg_name)) {
+				_seg_geoArray_map_1.remove(seg_name);
+			}
+			if (_seg_geoArray_map_2.containsKey(seg_name)) {
+				_seg_geoArray_map_2.remove(seg_name);
+			}
+			if (_seg_geoArray_map_3.containsKey(seg_name)) {
+				_seg_geoArray_map_3.remove(seg_name);
+			}
+			if (_seg_geoArray_map_4.containsKey(seg_name)) {
+				_seg_geoArray_map_4.remove(seg_name);
+			}
 			boolean update_needed = _map_name_to_seg.containsKey(seg_name);
 			if (update_needed) {
 				update_view();
@@ -297,8 +314,7 @@ public class Viewport3d extends Viewport implements MyObserver  {
 //			update_view();
 		}
 	}
-	
-	public Shape3D computeSegmentTriangleShape(String seg_name) {
+	public GeometryArray computeGeometryArray(String seg_name) {
 		Segment segment = _slices.getSegment(seg_name);
 		HashMap<Point3f, LinkedList<Integer>> point_indexs_map = new HashMap<>();
 		int index = 0;
@@ -309,6 +325,9 @@ public class Viewport3d extends Viewport implements MyObserver  {
 		BitMask bitMask_down;
 				
 		Point3f trans = new Point3f();
+		Point3f a = new Point3f();
+		Point3f b = new Point3f();
+		Point3f c = new Point3f();
 		for (int z = 0; z < num_images-_magic_size; z = z+_magic_size) {
 			bitMask_up = segment.getMask(z);
 			bitMask_down = segment.getMask(z+_magic_size);
@@ -321,9 +340,9 @@ public class Viewport3d extends Viewport implements MyObserver  {
 					Triangle[] triangles = _marchingCube.get_Triangles(key);
 					for (int i = 0; i < triangles.length; i++) {
 						trans = new Point3f(x,y,z);
-						Point3f a = new Point3f(triangles[i].getVertex0());
-						Point3f b = new Point3f(triangles[i].getVertex1());
-						Point3f c = new Point3f(triangles[i].getVertex2());
+						a = new Point3f(triangles[i].getVertex0());
+						b = new Point3f(triangles[i].getVertex1());
+						c = new Point3f(triangles[i].getVertex2());
 						a.scale(_magic_size);
 						b.scale(_magic_size);
 						c.scale(_magic_size);
@@ -338,10 +357,6 @@ public class Viewport3d extends Viewport implements MyObserver  {
 						b.set(0 - b.x , 0 - b.z, 0 - b.y );
 						c.set(0 - c.x , 0 - c.z, 0 - c.y );
 						
-//						seg_trias.add(a);
-//						seg_trias.add(b);
-//						seg_trias.add(c);
-//						System.out.println("a: "+a+",b: "+b+",c: "+c);
 						if (point_indexs_map.containsKey(a)) {
 							point_indexs_map.get(a).add(index);
 						}else {
@@ -368,7 +383,8 @@ public class Viewport3d extends Viewport implements MyObserver  {
 				}
 			}
 		}
-		System.out.println(index);
+		System.out.println("Segment: "+seg_name+", magic size: "+_magic_size+" computed");
+		System.out.println("Total Triangles : "+index/3);
 		
 		IndexedTriangleArray itrias = new IndexedTriangleArray(point_indexs_map.size(), IndexedTriangleArray.COORDINATES|IndexedTriangleArray.NORMALS, index);
 		index = 0;
@@ -381,18 +397,148 @@ public class Viewport3d extends Viewport implements MyObserver  {
 			}
 			index++;
 		}
+		GeometryInfo geometryInfo = new GeometryInfo(itrias);
+		NormalGenerator ng = new NormalGenerator();
+		ng.generateNormals(geometryInfo);
+		GeometryArray result = geometryInfo.getGeometryArray();
+		return result;
+	}
+	public Appearance getAppearance(String seg_name) {
+		Segment segment = _slices.getSegment(seg_name);
 		Color3f color = new Color3f(new Color(segment.getColor()));
 		Material material = new Material();
 		material.setDiffuseColor(color);
 		Appearance appearance_segment = new Appearance();
 		appearance_segment.setMaterial(material);
-		GeometryInfo geometryInfo = new GeometryInfo(itrias);
-		NormalGenerator ng = new NormalGenerator();
-		ng.generateNormals(geometryInfo);
-		GeometryArray result = geometryInfo.getGeometryArray();
-		Shape3D shape3d = new Shape3D(result, appearance_segment);
-		return shape3d;
+		return appearance_segment;
 	}
+	public GeometryArray get_seg_geoArray(String seg_name) {
+		GeometryArray geometryArray = null;
+		switch (_magic_size) {
+		case 1:
+			if (_seg_geoArray_map_1.containsKey(seg_name)) {
+				return _seg_geoArray_map_1.get(seg_name);
+			}
+			geometryArray = computeGeometryArray(seg_name);
+			_seg_geoArray_map_1.put(seg_name, geometryArray);
+			break;
+		case 2:
+			if (_seg_geoArray_map_2.containsKey(seg_name)) {
+				return _seg_geoArray_map_2.get(seg_name);
+			}
+			geometryArray = computeGeometryArray(seg_name);
+			_seg_geoArray_map_2.put(seg_name, geometryArray);			
+			break;
+		case 3:
+			if (_seg_geoArray_map_3.containsKey(seg_name)) {
+				return _seg_geoArray_map_3.get(seg_name);
+			}
+			geometryArray = computeGeometryArray(seg_name);
+			_seg_geoArray_map_3.put(seg_name, geometryArray);			
+			break;
+		case 4:
+			if (_seg_geoArray_map_4.containsKey(seg_name)) {
+				return _seg_geoArray_map_4.get(seg_name);
+			}
+			geometryArray = computeGeometryArray(seg_name);
+			_seg_geoArray_map_4.put(seg_name, geometryArray);			
+			break;
+		default:
+			break;
+		}
+		return geometryArray;
+	}
+//	public Shape3D computeSegmentTriangleShape(String seg_name) {
+//		Segment segment = _slices.getSegment(seg_name);
+//		HashMap<Point3f, LinkedList<Integer>> point_indexs_map = new HashMap<>();
+//		int index = 0;
+//		int w = _slices.getImageWidth();
+//		int h = _slices.getImageHeight();
+//		int num_images = _slices.getNumberOfImages();
+//		BitMask bitMask_up;
+//		BitMask bitMask_down;
+//				
+//		Point3f trans = new Point3f();
+//		for (int z = 0; z < num_images-_magic_size; z = z+_magic_size) {
+//			bitMask_up = segment.getMask(z);
+//			bitMask_down = segment.getMask(z+_magic_size);
+//			for (int x = 0; x < w - _magic_size; x = x+_magic_size) {
+//				for (int y = 0; y < h - _magic_size; y = y+_magic_size) {
+//					int key = calculate_key(x, y, bitMask_up, bitMask_down);
+//					if (key == 0 || key == 255) {
+//						continue;
+//					}
+//					Triangle[] triangles = _marchingCube.get_Triangles(key);
+//					for (int i = 0; i < triangles.length; i++) {
+//						trans = new Point3f(x,y,z);
+//						Point3f a = new Point3f(triangles[i].getVertex0());
+//						Point3f b = new Point3f(triangles[i].getVertex1());
+//						Point3f c = new Point3f(triangles[i].getVertex2());
+//						a.scale(_magic_size);
+//						b.scale(_magic_size);
+//						c.scale(_magic_size);
+//						a.add(trans);
+//						b.add(trans);
+//						c.add(trans);
+//						
+//						a.set(a.x/w-0.5f, a.y/h-0.5f, a.z/num_images-0.5f);
+//						b.set(b.x/w-0.5f, b.y/h-0.5f, b.z/num_images-0.5f);
+//						c.set(c.x/w-0.5f, c.y/h-0.5f, c.z/num_images-0.5f);
+//						a.set(0 - a.x , 0 - a.z, 0 - a.y );
+//						b.set(0 - b.x , 0 - b.z, 0 - b.y );
+//						c.set(0 - c.x , 0 - c.z, 0 - c.y );
+//						
+//						if (point_indexs_map.containsKey(a)) {
+//							point_indexs_map.get(a).add(index);
+//						}else {
+//							LinkedList<Integer> indexs = new LinkedList<>();
+//							indexs.add(index);
+//							point_indexs_map.put(a, indexs);
+//						}
+//						if (point_indexs_map.containsKey(b)) {
+//							point_indexs_map.get(b).add(index+1);
+//						}else {
+//							LinkedList<Integer> indexs = new LinkedList<>();
+//							indexs.add(index+1);
+//							point_indexs_map.put(b, indexs);
+//						}
+//						if (point_indexs_map.containsKey(c)) {
+//							point_indexs_map.get(c).add(index+2);
+//						}else {
+//							LinkedList<Integer> indexs = new LinkedList<>();
+//							indexs.add(index+2);
+//							point_indexs_map.put(c, indexs);
+//						}
+//						index = index + 3;
+//					}
+//				}
+//			}
+//		}
+//		System.out.println(index);
+//		
+//		IndexedTriangleArray itrias = new IndexedTriangleArray(point_indexs_map.size(), IndexedTriangleArray.COORDINATES|IndexedTriangleArray.NORMALS, index);
+//		index = 0;
+//		Iterator<Point3f> iterator = point_indexs_map.keySet().iterator();
+//		while (iterator.hasNext()) {
+//			Point3f point3f = iterator.next();
+//			itrias.setCoordinate(index, point3f);
+//			for (Integer integer : point_indexs_map.get(point3f)) {
+//				itrias.setCoordinateIndex(integer, index);
+//			}
+//			index++;
+//		}
+//		Color3f color = new Color3f(new Color(segment.getColor()));
+//		Material material = new Material();
+//		material.setDiffuseColor(color);
+//		Appearance appearance_segment = new Appearance();
+//		appearance_segment.setMaterial(material);
+//		GeometryInfo geometryInfo = new GeometryInfo(itrias);
+//		NormalGenerator ng = new NormalGenerator();
+//		ng.generateNormals(geometryInfo);
+//		GeometryArray result = geometryInfo.getGeometryArray();
+//		Shape3D shape3d = new Shape3D(result, appearance_segment);
+//		return shape3d;
+//	}
 	public int calculate_key(int x, int y, BitMask bitMask_up, BitMask bitMask_down) {
 		int key = 0;
 		key = bitMask_up.get(x, y) ? (key+1):key;
