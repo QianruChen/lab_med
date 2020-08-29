@@ -12,6 +12,7 @@ import javax.media.j3d.Bounds;
 import javax.media.j3d.BranchGroup;
 import javax.media.j3d.Canvas3D;
 import javax.media.j3d.ColoringAttributes;
+import javax.media.j3d.PointArray;
 import javax.media.j3d.Shape3D;
 import javax.media.j3d.TransformGroup;
 import javax.media.j3d.TriangleArray;
@@ -467,7 +468,7 @@ public class MarchingCube {
 			triangles = new Triangle[2];
 			triangle = new Triangle(I, H, L);
 			triangles[0] = triangle;
-			triangle = new Triangle(D, C, G);
+			triangle = new Triangle(B, F, C);
 			triangles[1] = triangle;
 			break;
 		case 5:
@@ -512,9 +513,9 @@ public class MarchingCube {
 			keys[6] = 1;
 			keys[7] = 1;
 			triangles = new Triangle[2];
-			triangle = new Triangle(E, H, G);
+			triangle = new Triangle(E, H, F);
 			triangles[0] = triangle;
-			triangle = new Triangle(E, G, F);
+			triangle = new Triangle(F, H, G);
 			triangles[1] = triangle;
 			break;
 		case 9:
@@ -540,7 +541,7 @@ public class MarchingCube {
 			triangles = new Triangle[4];
 			triangle = new Triangle(A, D, I);
 			triangles[0] = triangle;
-			triangle = new Triangle(D, I, L);
+			triangle = new Triangle(D, L, I);
 			triangles[1] = triangle;
 			triangle = new Triangle(C, B, J);
 			triangles[2] = triangle;
@@ -602,7 +603,7 @@ public class MarchingCube {
 			triangles[0] = triangle;
 			triangle = new Triangle(A, I, L);
 			triangles[1] = triangle;
-			triangle = new Triangle(A, F, L);
+			triangle = new Triangle(A, L, F);
 			triangles[2] = triangle;
 			triangle = new Triangle(F, L, G);
 			triangles[3] = triangle;

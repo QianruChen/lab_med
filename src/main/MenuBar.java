@@ -123,11 +123,10 @@ public class MenuBar extends JMenuBar {
 
 		item = new JMenuItem(new String("3d Item 1"));
 		// item.addActionListener(...);
-		item = new JCheckBoxMenuItem(new String("Show original Data"), false);		
+		item = new JCheckBoxMenuItem(new String("Show original Data"), true);		
 		item.addActionListener(toggleBGListener3d);		
 		_menu3d.add(item);
-		
-		_menu3d.addSeparator();		
+				
 		
 		JRadioButtonMenuItem rbMenuItem3d;
 		ButtonGroup group3d = new ButtonGroup();
@@ -154,7 +153,38 @@ public class MenuBar extends JMenuBar {
 		_menu3d.add(rbMenuItem3d);
 
 		
-		_menu3d.addSeparator();		
+		_menu3d.addSeparator();	
+		
+		JRadioButtonMenuItem rbMenuItemMagic;
+		ButtonGroup groupMagic = new ButtonGroup();
+
+		rbMenuItemMagic = new JRadioButtonMenuItem("Point Darstellung");
+		rbMenuItemMagic.addActionListener(setMagicListener);
+		groupMagic.add(rbMenuItemMagic);
+		_menu3d.add(rbMenuItemMagic);
+		rbMenuItemMagic.setSelected(true);
+		
+		rbMenuItemMagic = new JRadioButtonMenuItem("Magic size 1");
+		rbMenuItemMagic.addActionListener(setMagicListener);
+		groupMagic.add(rbMenuItemMagic);
+		_menu3d.add(rbMenuItemMagic);
+
+		rbMenuItemMagic = new JRadioButtonMenuItem("Magic size 2");
+		rbMenuItemMagic.addActionListener(setMagicListener);
+		groupMagic.add(rbMenuItemMagic);
+		_menu3d.add(rbMenuItemMagic);
+
+		rbMenuItemMagic = new JRadioButtonMenuItem("Magic size 3");
+		rbMenuItemMagic.addActionListener(setMagicListener);
+		groupMagic.add(rbMenuItemMagic);
+		_menu3d.add(rbMenuItemMagic);
+		
+		rbMenuItemMagic = new JRadioButtonMenuItem("Magic size 4");
+		rbMenuItemMagic.addActionListener(setMagicListener);
+		groupMagic.add(rbMenuItemMagic);
+		_menu3d.add(rbMenuItemMagic);
+		
+		_menu3d.addSeparator();	
 
 		_no_entries3d = new JMenuItem(new String("no segmentations yet"));
 		_no_entries3d.setEnabled(false);
@@ -312,6 +342,23 @@ public class MenuBar extends JMenuBar {
 				_v3d.setRenderingMode(2);
 			}else {
 				_v3d.setRenderingMode(3);
+			}
+		}
+	};
+	ActionListener setMagicListener = new ActionListener() {
+		@Override
+		public void actionPerformed(ActionEvent event) {
+			String name = event.getActionCommand();
+			if (name.equals("Magic size 1")) {
+				_v3d.setMagic(1);
+			} else if (name.equals("Magic size 2")) {
+				_v3d.setMagic(2);
+			} else if (name.equals("Magic size 3")) {
+				_v3d.setMagic(3);
+			}else if (name.equals("Magic size 4")) {
+				_v3d.setMagic(4);
+			}else {
+				_v3d.setMagic(0);
 			}
 		}
 	};

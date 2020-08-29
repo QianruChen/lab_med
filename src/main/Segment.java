@@ -117,4 +117,7 @@ public class Segment {
 		}
 		
 	}
+	public void set_layers(BitMask[] _layers) {
+		this._layers = _layers;
+	}
 }
