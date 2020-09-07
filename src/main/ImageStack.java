@@ -31,6 +31,8 @@ public class ImageStack extends MyObservable {
 	
 	// voxel with original gray value (unskaliert)
 	private int[][][] _voxel;
+	
+	
 //	private int[][][] _skaliert_voxel;
 	/**
 	 * Default Constructor.

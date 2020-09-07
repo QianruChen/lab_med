@@ -56,6 +56,7 @@ public class Viewport2d extends Viewport implements MyObserver {
 
 	// transversal:0, sagital:1, frontal:2
 	private int _view_mode;
+	
 	private boolean _region_grow;
 	/**
 	 * Private class, implementing the GUI element for displaying the 2d data.
@@ -246,8 +247,6 @@ public class Viewport2d extends Viewport implements MyObserver {
 		if (_slices.getNumberOfImages() == 0) {
 			return;
 		}
-		
-		
 		// _w and _h need to be initialized BEFORE filling the image array !
 		if (_bg_img==null || _bg_img.getWidth(null)!=_w || _bg_img.getHeight(null)!=_h) {
 			reallocate();
