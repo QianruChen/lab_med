@@ -27,8 +27,6 @@ public class ToolDistanceSelector extends JPanel {
 		// in the current dicom series
 		int distace_min = 1;
 		int distance_max = 10;
-		int window_center_max = 1<<(slices.getDiFile(0).getBitsStored());
-		int window_width_max = 1<<(slices.getDiFile(0).getBitsStored());
 
 		
 		_distance_settings_label = new JLabel("Distance of the grid Settings");

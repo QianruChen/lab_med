@@ -155,6 +155,7 @@ public class Viewport3d extends Viewport implements MyObserver  {
 		_panel3d = new Panel3d( config );		
         this.add(_panel3d, BorderLayout.CENTER );     
         _marchingCube = MarchingCube.getInstance();
+        //create look up table
         _marchingCube.create_lut();
     	_seg_geoArray_map_1 = new HashMap<>();
     	_seg_geoArray_map_2 = new HashMap<>();
@@ -401,6 +402,7 @@ public class Viewport3d extends Viewport implements MyObserver  {
 			}
 			index++;
 		}
+		//
 		GeometryInfo geometryInfo = new GeometryInfo(itrias);
 		NormalGenerator ng = new NormalGenerator();
 		ng.generateNormals(geometryInfo);

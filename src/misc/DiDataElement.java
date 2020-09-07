@@ -59,7 +59,7 @@ public class DiDataElement {
 			boolean little_endian = is.get_little_endian();
 			int b2 = is.getByte();
 			int b3 = is.getByte();
-			int vl = little_endian ? ((b3<<24) + (b2<<16) + (b1<<8) + b0) : ((b0<<24) + (b1<<16) + (b2<<8) + b3);;
+			int vl = little_endian ? ((b3<<24) + (b2<<16) + (b1<<8) + b0) : ((b0<<24) + (b1<<16) + (b2<<8) + b3);
 			setVL(vl);
 			setVR(DiDi.getVR(getTag()));
 		}
